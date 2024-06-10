@@ -108,7 +108,7 @@ async function main(args) {
     await backupSave(backupName);
 
     // Default parameter values
-    let operations = ["download", "merge"];
+    let operations = ["backup"];
     let slotNumber = "";
     let slotNumberMap = "";
 
