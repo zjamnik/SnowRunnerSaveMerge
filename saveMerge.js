@@ -130,18 +130,41 @@ async function main(args) {
     for (let operation of operations) {
         switch (operation) {
             case "download":
+                // Get the list of files in this bin
                 let down = await fetch(CONFIG.filebinURL, { "headers": { "accept": "application/json" } });
                 let binFileList = JSON.parse(await down.text());
 
-                // console.log(binFileList);
-
+                // Find the most recently uploaded save file
+                let mostRecentUpload;
+                let mostRecentUploadTime = 0;
                 for (let file of binFileList.files) {
-                    let createdDate = new Date(file.crated_at);
-                    console.log(createdDate);
+                    if (file.filename.startsWith("remote")) {
+                        let createdDate = Date.parse(file.created_at).valueOf();
+                        if (createdDate > mostRecentUploadTime) {
+                            mostRecentUpload = file;
+                            mostRecentUploadTime = createdDate;
+                        }
+                    }
                 }
 
-                // downloaded = await fetch("https://filebin.net/plrho4w60pe25pae/SR_24-06-10_01-29", { "headers": { "cookie": "verified=2024-05-24" } });
-                // await fs.writeFile("./SR_24-06-10_01-35.7z", downloaded.body);
+                // Check if the file isn't to old to download, if older that 1 hour it might not be suitable for the merge
+                if (Date.now() - mostRecentUploadTime > 60 * 60 * 1000) {
+                    throw (new Error("Save file to old, aborting! To force merge download the file manually and run the script using merge parameter!"));
+                }
+
+                // Download the selected file
+                downloaded = await fetch(CONFIG.filebinURL + "/" + mostRecentUpload.filename, { "headers": { "cookie": "verified=2024-05-24" } });
+                await fs.writeFile(__dirname + "\\" + mostRecentUpload.filename, downloaded.body);
+
+                // Remove current save from loadLocation
+                await fs.rm(CONFIG.loadLocation + "/remote", { recursive: true });
+                await fs.mkdir(CONFIG.loadLocation + "/remote");
+
+                // Unzip downloaded file
+                exec(`${__dirname}\\7z.exe x ${__dirname}\\${mostRecentUpload.filename} "-o${__dirname}\\save\\remote"`);
+
+                // Remove the downloaded file
+                await fs.rm(`${__dirname}\\${mostRecentUpload.filename}`);
                 break;
 
             case "merge":
