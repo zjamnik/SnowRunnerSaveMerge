@@ -91,10 +91,7 @@ function mergeSave(src, dest) {
     return dest;
 }
 
-async function backupSave() {
-    let dateTime = new Date();
-    backupName = `remote_${dateTime.getFullYear()}-${(dateTime.getMonth() + 1).toString().padStart(2, "0")}-${dateTime.getDate().toString().padStart(2, "0")}_${dateTime.getHours().toString().padStart(2, "0")}-${dateTime.getMinutes().toString().padStart(2, "0")}-${dateTime.getSeconds().toString().padStart(2, "0")}`;
-
+async function backupSave(backupName) {
     await fs.cp(CONFIG.saveLocation + "/remote", CONFIG.backupLocation + "/" + backupName, { recursive: true });
 }
 
@@ -106,7 +103,9 @@ async function main(args) {
     await loadConfig();
 
     // Backup current save
-    await backupSave();
+    let dateTime = new Date();
+    let backupName = `remote_${dateTime.getFullYear()}-${(dateTime.getMonth() + 1).toString().padStart(2, "0")}-${dateTime.getDate().toString().padStart(2, "0")}_${dateTime.getHours().toString().padStart(2, "0")}-${dateTime.getMinutes().toString().padStart(2, "0")}-${dateTime.getSeconds().toString().padStart(2, "0")}`;
+    await backupSave(backupName);
 
     // Default parameter values
     let operations = ["download", "merge"];
@@ -153,7 +152,7 @@ async function main(args) {
                 let destSaveData = await fs.readFile(CONFIG.saveLocation + "/remote/CompleteSave" + slotNumber + ".cfg", { encoding: "utf8" });
                 let destSaveDataJSON = JSON.parse(destSaveData.slice(0, -1));
 
-                saveDataJSON = mergeSave(srcSaveDataJSON, destSaveDataJSON);
+                let saveDataJSON = mergeSave(srcSaveDataJSON, destSaveDataJSON);
 
                 await fs.writeFile(CONFIG.saveLocation + "/remote/CompleteSave" + slotNumber + ".cfg", JSON.stringify(saveDataJSON) + "\0"); // Write modified save file
 
@@ -164,7 +163,7 @@ async function main(args) {
                         try {
                             await fs.copyFile(CONFIG.loadLocation + "/remote/" + file, CONFIG.saveLocation + "/remote/" + file);
                         } catch (err) {
-                            console.log("Error copying map files, merge incoplete, restoring from backup is advised!");
+                            console.log("Error copying map files, merge incomplete, restoring from backup is advised!");
                             throw (err);
                         }
                     }
@@ -176,7 +175,7 @@ async function main(args) {
                 exec(`${__dirname}\\7z.exe a ${archivePath} ${__dirname}\\backups\\${backupName}\\*`);
 
                 fileInput = await fs.readFile(archivePath);
-                await fetch("https://filebin.net/plrho4w60pe25pae/" + backupName + ".7z", {
+                await fetch(CONFIG.filebinURL + "/" + backupName + ".7z", {
                     body: fileInput,
                     headers: {
                         Accept: "application/json",
