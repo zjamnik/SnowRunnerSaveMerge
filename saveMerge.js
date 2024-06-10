@@ -9,6 +9,7 @@ const configTemplate = {
     "saveLocation": "C:/Program Files (x86)/Steam/userdata/<your_steam_id>/1465360",
     "loadLocation": "./save",
     "backupLocation": "./backups",
+    "backupInterval": "10",
     "filebinURL": "get your bin at https://filebin.net, a file named 'SnowRunnerSaveMerge' needs to be uploaded to check if we have a correct bin"
 };
 
@@ -23,6 +24,18 @@ async function loadConfig() {
 
     configFile = await fs.readFile(configFilePath);
     let conf = JSON.parse(configFile);
+
+    if (conf.saveLocation.startsWith(".")) {
+        conf.saveLocation = conf.saveLocation.replace(".", __dirname);
+    }
+
+    if (conf.loadLocation.startsWith(".")) {
+        conf.loadLocation = conf.loadLocation.replace(".", __dirname);
+    }
+
+    if (conf.backupLocation.startsWith(".")) {
+        conf.backupLocation = conf.backupLocation.replace(".", __dirname);
+    }
 
     if (!fssync.existsSync(conf.saveLocation + "/remote")) {
         throw (new Error("Save location doesn't exist, please correct you config!"));
@@ -42,6 +55,8 @@ async function loadConfig() {
     }
 
     CONFIG = conf;
+
+    // throw (new Error("STOP AT CONFIG LOAD!!!!!!!!!!!!!!"));
 }
 
 function mergeSave(src, dest) {
@@ -76,14 +91,22 @@ function mergeSave(src, dest) {
     return dest;
 }
 
-async function main(args) {
-    await loadConfig();
-
-    // Backup current save
+async function backupSave() {
     let dateTime = new Date();
     backupName = `remote_${dateTime.getFullYear()}-${(dateTime.getMonth() + 1).toString().padStart(2, "0")}-${dateTime.getDate().toString().padStart(2, "0")}_${dateTime.getHours().toString().padStart(2, "0")}-${dateTime.getMinutes().toString().padStart(2, "0")}-${dateTime.getSeconds().toString().padStart(2, "0")}`;
 
     await fs.cp(CONFIG.saveLocation + "/remote", CONFIG.backupLocation + "/" + backupName, { recursive: true });
+}
+
+function sleep(minutes) {
+    return new Promise((resolve) => setTimeout(resolve, minutes * 60 * 1000));
+}
+
+async function main(args) {
+    await loadConfig();
+
+    // Backup current save
+    await backupSave();
 
     // Default parameter values
     let operations = ["download", "merge"];
@@ -149,17 +172,41 @@ async function main(args) {
                 break;
 
             case "upload":
+                let archivePath = `${__dirname}\\${backupName}.7z`;
+                exec(`${__dirname}\\7z.exe a ${archivePath} ${__dirname}\\backups\\${backupName}\\*`);
+
+                fileInput = await fs.readFile(archivePath);
+                await fetch("https://filebin.net/plrho4w60pe25pae/" + backupName + ".7z", {
+                    body: fileInput,
+                    headers: {
+                        Accept: "application/json",
+                        "Content-Type": "application/octet-stream"
+                    },
+                    method: "POST"
+                });
+
+                await fs.rm(archivePath);
+                break;
+
+            case "backup":
+                while (true) {
+                    console.log("Waiting for next backup, you can stop the script using Ctrl+C!");
+                    await sleep(CONFIG.backupInterval);
+                    await backupSave();
+                    console.log("Performing backup, wait before terminating the program!");
+                }
                 break;
 
             default:
                 console.log("\
 Unknown parameter!\n\
-    saveMerge operations save_slot\n\
+    saveMerge [operations=download,merge] [save_slot=1]\n\
 \n\
         operations - comma separated list of operations, from these: download, merge, upload\n\
             download - download save from file.io, this will delete contents of loadLocation\n\
             merge - merge the save from loadLocation\n\
             upload - pack the current save and upload to filebin.net\n\
+            backup - will auto backup save file on set interval\n\
         save_slot - which slot to merge, values 1 to 4 are accepted");
                 return;
         }
