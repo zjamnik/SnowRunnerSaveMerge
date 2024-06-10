@@ -1,5 +1,5 @@
 backups
 save
-7z.exe
-node.exe
+*.exe
+*.7z
 config.json

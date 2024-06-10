@@ -5,7 +5,7 @@ const exec = require("child_process").execSync;
 var CONFIG = null;
 
 const configTemplate = {
-    "info": "This script will overwrite most of you save file, it's best to only use this with a save file dedicated to co-op play, with a consistent host!",
+    "info": "This script will overwrite most of your save file, it's best to only use this with a save file dedicated to co-op play, with a consistent host!",
     "saveLocation": "C:/Program Files (x86)/Steam/userdata/<your_steam_id>/1465360",
     "loadLocation": "./save",
     "backupLocation": "./backups",
@@ -194,9 +194,11 @@ async function main(args) {
                 break;
 
             case "upload":
+                // Create 7z archive from latest backup
                 let archivePath = `${__dirname}\\${backupName}.7z`;
                 exec(`${__dirname}\\7z.exe a ${archivePath} ${__dirname}\\backups\\${backupName}\\*`);
 
+                // Upload the file to filebin
                 fileInput = await fs.readFile(archivePath);
                 await fetch(CONFIG.filebinURL + "/" + backupName + ".7z", {
                     body: fileInput,
@@ -207,15 +209,17 @@ async function main(args) {
                     method: "POST"
                 });
 
+                // Remove the archive
                 await fs.rm(archivePath);
                 break;
 
             case "backup":
+                // Auto backcup will loop forever and create a backup of you save files every set interval
                 while (true) {
                     console.log("Waiting for next backup, you can stop the script using Ctrl+C!");
                     await sleep(CONFIG.backupInterval);
-                    await backupSave();
                     console.log("Performing backup, wait before terminating the program!");
+                    await backupSave();
                 }
                 break;
 
@@ -224,32 +228,15 @@ async function main(args) {
 Unknown parameter!\n\
     saveMerge [operations=download,merge] [save_slot=1]\n\
 \n\
-        operations - comma separated list of operations, from these: download, merge, upload\n\
+        operations - comma separated list of operations, from these: download, merge, upload, backup\n\
             download - download save from file.io, this will delete contents of loadLocation\n\
             merge - merge the save from loadLocation\n\
             upload - pack the current save and upload to filebin.net\n\
             backup - will auto backup save file on set interval\n\
-        save_slot - which slot to merge, values 1 to 4 are accepted");
+        save_slot - which slot to merge, values 1 to 4 are accepted, need to play on the same slot as host");
                 return;
         }
     }
-
-
-
-    //     case "upload": // from saveLocation backups
-
-    //         if (operation == "upload") {
-
-    //             fileInput = await fs.readFile("./remote.7z");
-    //             await fetch("https://filebin.net/plrho4w60pe25pae/SR_24-06-10_01-35.7z", {
-    //                 body: fileInput,
-    //                 headers: {
-    //                     Accept: "application/json",
-    //                     "Content-Type": "application/octet-stream"
-    //                 },
-    //                 method: "POST"
-    //             });
-    //         }
 }
 
 main(process.argv);
