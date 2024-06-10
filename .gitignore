@@ -3,3 +3,4 @@ save
 *.exe
 *.7z
 config.json
+*.lnk

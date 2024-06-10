@@ -24,7 +24,7 @@ It's best to run the script directly after ending your game session. To prevent 
 1. Get all your vehicles inside a garage, best to retain them
 1. Leave all newly acquired trucks, that the guest doesn't have, outside on the map
 1. Exit the game
-1. Run the script with `upload` operation `node .\saveMerge.js upload` additionally provide save slot if different than first
+1. Run the script with `upload` operation `node .\saveMerge.js upload`
 
 #### Guest
 1. Get all your vehicles inside a garage, best to retain them
