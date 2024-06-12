@@ -19,6 +19,8 @@ async function loadConfig() {
 
     if (!fssync.existsSync(configFilePath)) {
         await fs.writeFile(configFilePath, JSON.stringify(configTemplate, null, 4), "utf8");
+        console.log("No config file detected, writing template config, please fill it out!");
+        await sleep(5);
         throw (new Error("No config file detected, writing template config, please fill it out!"));
     }
 
@@ -38,19 +40,27 @@ async function loadConfig() {
     }
 
     if (!fssync.existsSync(conf.saveLocation + "/remote")) {
+        console.log("Save location doesn't exist, please correct you config!");
+        await sleep(5);
         throw (new Error("Save location doesn't exist, please correct you config!"));
     }
 
     if (!fssync.existsSync(conf.loadLocation)) {
+        console.log("Load location doesn't exist, please correct you config!");
+        await sleep(5);
         throw (new Error("Load location doesn't exist, please correct you config!"));
     }
 
     if (!fssync.existsSync(conf.backupLocation)) {
+        console.log("Backup location doesn't exist, please correct you config!");
+        await sleep(5);
         throw (new Error("Backup location doesn't exist, please correct you config!"));
     }
 
     let checkBin = await fetch(conf.filebinURL + "/SnowRunnerSaveMerge");
     if (await checkBin.text() == "The file does not exist.") {
+        console.log("FileBin not found, please check the config or create a new one!");
+        await sleep(5);
         throw (new Error("FileBin not found, please check the config or create a new one!"));
     }
 
@@ -95,8 +105,8 @@ async function backupSave(backupName) {
     await fs.cp(CONFIG.saveLocation + "/remote", CONFIG.backupLocation + "/" + backupName, { recursive: true });
 }
 
-function sleep(minutes) {
-    return new Promise((resolve) => setTimeout(resolve, minutes * 60 * 1000));
+function sleep(seconds) {
+    return new Promise((resolve) => setTimeout(resolve, seconds * 1000));
 }
 
 async function main(args) {
@@ -122,6 +132,8 @@ async function main(args) {
             slotNumber = args[3] - 1;
             slotNumberMap = args[3] - 1 + "_";
         } else {
+            console.log("Incorrect slot number! Values 1 to 4 are accepted!");
+            await sleep(5);
             throw (new Error("Incorrect slot number! Values 1 to 4 are accepted!"));
         }
     }
@@ -149,7 +161,9 @@ async function main(args) {
 
                 // Check if the file isn't to old to download, if older that 1 hour it might not be suitable for the merge
                 if (Date.now() - mostRecentUploadTime > 60 * 60 * 1000) {
-                    throw (new Error("Save file to old, aborting! To force merge download the file manually and run the script using merge parameter!"));
+                    console.log("Save file too old, aborting! To force merge download the file manually and run the script using merge parameter!");
+                    await sleep(5);
+                    throw (new Error("Save file too old, aborting! To force merge download the file manually and run the script using merge parameter!"));
                 }
 
                 // Download the selected file
@@ -187,6 +201,7 @@ async function main(args) {
                             await fs.copyFile(CONFIG.loadLocation + "/remote/" + file, CONFIG.saveLocation + "/remote/" + file);
                         } catch (err) {
                             console.log("Error copying map files, merge incomplete, restoring from backup is advised!");
+                            await sleep(5);
                             throw (err);
                         }
                     }
@@ -217,7 +232,7 @@ async function main(args) {
                 // Auto backcup will loop forever and create a backup of you save files every set interval
                 while (true) {
                     console.log("Waiting for next backup, you can stop the script using Ctrl+C!");
-                    await sleep(CONFIG.backupInterval);
+                    await sleep(CONFIG.backupInterval * 60);
                     console.log("Performing backup, wait before terminating the program!");
                     await backupSave();
                 }
